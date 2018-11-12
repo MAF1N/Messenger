@@ -9,6 +9,7 @@ function getCurrentUserChats(db, nickname1, callback){
                 var result = docs.filter(x => x.users.find(u => u.nickname == nickname1))
                     .map((value) => {
                         return {
+                            _id: value._id,
                             users: value.users.map((value)=>{
                                 return {
                                     _id: value._id,

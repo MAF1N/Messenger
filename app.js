@@ -6,7 +6,7 @@ const bodyParser = require('body-parser');
 const jsonParser = bodyParser.json();
 const MongoClient = require('mongodb').MongoClient;
 const mongodbConnectionString = 'mongodb+srv://Nekit:Ytrbn@clouddevelopmentmessenger-y3bqw.mongodb.net/test?retryWrites=true';
-const assert = require('assert');
+//const assert = require('assert');
 const dbName = 'CloudDevelopmentMessenger';
 const client = MongoClient(mongodbConnectionString);
 const jwt = require('jsonwebtoken');
@@ -19,6 +19,8 @@ var tokenchecker = require('./logic/tokenchecker');
 var findByNickName = require('./logic/find-by-nickname');
 var getChat = require('./logic/get-chat');
 var getCurrentUserChats = require('./logic/current-user-chats');
+var addChatMessage = require('./logic/add-chat-message');
+
 app.use(jsonParser);
 
 app.use(function(err, req, res, next) {
@@ -26,37 +28,38 @@ app.use(function(err, req, res, next) {
     res.status(500).send('Something broke!');
 });
 
-app.get('/', (req, res) => res.send('Hello World!'));
+//app.get('/', (req, res) => res.send('Hello World!'));
 
 app.post('/register', (req, res) =>{
     try {
         client.connect(function(err) {
-            assert.equal(null, err);
-            console.log("Connected successfully to server");
-            const db = client.db(dbName);
-            const user = createUser(req.body);
-            if (user == null){
-                console.log("User wasn`t created.");
-                return;
-            }
-            db.collection('users').find(user).limit(1).toArray((err, docs) => {
-                if(!docs && err!=null || err == null && docs.length == 0){
-                    db.collection('users').insertOne(user, function(err, r) {
-                        assert.equal(null, err);
-                        assert.equal(1, r.insertedCount);
-                        console.log("Successfully added user");
-                    });
-                } else if (docs.length > 0){
-                    console.log("user already exists");
-                    console.log(docs);
-                    client.close();
-                    res.status(200).send("User already exists");
-                } else if (err){
-                    console.log(err);
+            if (!err){
+                console.log("Connected successfully to server");
+                const db = client.db(dbName);
+                const user = createUser(req.body);
+                if (user == null){
+                    console.log("User wasn`t created.");
+                    return;
                 }
-
-                client.close();
-            });
+                db.collection('users').find(user).limit(1).toArray((err, docs) => {
+                    if(!docs && err!=null || err == null && docs.length == 0){
+                        db.collection('users').insertOne(user, function(err, r) {
+                            if(err && r.insertedCount == 1){
+                                console.log("Successfully added user");
+                            }
+                        });
+                    } else if (docs.length > 0){
+                        console.log("user already exists");
+                        console.log(docs);
+                        client.close();
+                        res.status(200).send("User already exists");
+                    } else if (err){
+                        console.log(err);
+                    }
+    
+                    client.close();
+                });
+            }
         });
         res.status(200).send();
     }
@@ -70,14 +73,17 @@ app.post('/login', (req, res) => {
     client.connect(function(err) {
         const db = client.db(dbName);
         db.collection('users').find(user).limit(1).toArray(function(err, docs) {         
-            assert.equal(null, err);
-            assert.equal(1, docs.length);
-            client.close();
-            if (docs.length == 1){
-                res.status(200).send(jwt.sign(user, "supersecret"));
-            } else {
-                res.status(400).send();
+            if(err){
+                console.log(err);
+            }else {
+                client.close();
+                if (docs.length == 1){
+                    res.status(200).send(jwt.sign(user, "supersecret"));
+                } else {
+                    res.status(400).send();
+                }
             }
+            
         });
     });
     
@@ -143,32 +149,43 @@ app.get('/chats', function(req, res) {
     });
 });
 
+app.use('/send/message', tokenchecker);
+app.use('/send/message', function(req, res){
+    client.connect((err)=> {
+        const db = client.db(dbName);
+        const decoded = jwt.verify(req.get('token'), "supersecret");
+
+        addChatMessage(db, decoded.nickname, req.body.nickname, req.body.message, (result) => {
+            client.close();
+            if (result){
+                clients[req.body.nickname].send(result);
+                res.json(result).send();
+            }
+        });
+    });
+});
 app.ws('/chat-ws', function(ws, req) {
-    // client.connect((err)=> {
-    //     const db = client.db(dbName);
-    //     const decoded = jwt.verify(req.get('token'), "supersecret");
-        
-    //     getChat(db, decoded.nickname, req.body.nickname, req.body.title, (result) => {
-    //         client.close();
-    //         clientChatSessions.chats[result._id] = {
-    //             chat: result,
-    //             connectedUsers: {} 
-    //         }
-    //     });
-    // });
-    // console.log("~~~~~~~~~~~~~~~~~~~~~~~~~");
-    // console.log(ws);
-    // console.log("~~~~~~~~~~~~~~~~~~~~~~~~~");
-    // console.log(req);
     ws.on('authenticate', function(msg) {
-        ws.send(msg);
+        token = JSON.parse(msg).token;
+        let decoded = jwt.decode(token);
+        clients[decoded.nickname] = ws;
+    });
+
+    ws.on('close', function(){
+        for (const key in clients) {
+            if (clients.hasOwnProperty(key)) {
+                const element = clients[key];
+                if (ws == element){
+                    delete clients[key];
+                }
+            }
+        }
     });
     console.log('socket');
 });
 
 app.get('/db', (req, res) => {
     client.connect(function(err) {
-        assert.equal(null, err);
         console.log("Connected successfully to server");
         const db = client.db(dbName);
         createNicknameIndex(db, console.log("nicknameIndex was settled up"));
