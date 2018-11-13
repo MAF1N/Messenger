@@ -111,8 +111,10 @@ app.get('/users/search', (req, res) => {
     console.log("Searching user with "+ searchQuery);
     client.connect(function(err) {
         const db = client.db(dbName);
+        let decoded = jwt.verify(req.get('token'), "supersecret").nickname;
         findByNickName(db, searchQuery, function(docs) {
             if (docs && docs.length > 0){
+                docs = docs.filter(x => x.nickname.toLowerCase() != decoded.toLowerCase());
                 res.status(200).json(docs).send();
             } else {
                 res.status(200).send("Noone with such nickname was found.");
