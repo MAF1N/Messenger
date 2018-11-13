@@ -57,7 +57,7 @@ app.post('/register', (req, res) =>{
                         console.log(err);
                     }
     
-                    client.close();
+                    db.close();
                 });
             }
         });
@@ -76,14 +76,13 @@ app.post('/login', (req, res) => {
             if(err){
                 console.log(err);
             }else {
-                client.close();
                 if (docs.length == 1){
                     res.status(200).send(jwt.sign(user, "supersecret"));
                 } else {
                     res.status(400).send();
                 }
             }
-            
+            db.close();
         });
     });
     
@@ -95,13 +94,13 @@ app.get('/user/info',(req, res) => {
     client.connect(function(err) {
         const db = client.db(dbName);
         findByNickName(db, searchQuery, function(docs) {
-            client.close();
             if (docs && docs.length > 0){
                 let retVal = docs.find(x => x.nickname == searchQuery);
                 res.status(200).json(retVal).send();
             } else {
                 res.status(200).send("Noone with such nickname was found.");
-            }          
+            }
+            db.close();          
         });    
     });
 })
@@ -113,12 +112,12 @@ app.get('/users/search', (req, res) => {
     client.connect(function(err) {
         const db = client.db(dbName);
         findByNickName(db, searchQuery, function(docs) {
-            client.close();
             if (docs && docs.length > 0){
                 res.status(200).json(docs).send();
             } else {
                 res.status(200).send("Noone with such nickname was found.");
-            }          
+            }   
+            db.close();       
         });    
     });
 });
@@ -130,8 +129,8 @@ app.post('/chat', function(req, res){
         const decoded = jwt.verify(req.get('token'), "supersecret");
         
         getChat(db, decoded.nickname, req.body.nickname, req.body.title, (result) => {
-            client.close();
             res.json(result).send();
+            db.close();
         });
     });
 });
@@ -143,8 +142,8 @@ app.get('/chats', function(req, res) {
         const decoded = jwt.verify(req.get('token'), "supersecret");
         
         getCurrentUserChats(db, decoded.nickname, (result) => {
-            client.close();
             res.json(result).send();
+            db.close();
         });
     });
 });
@@ -156,14 +155,15 @@ app.use('/send/message', function(req, res){
         const decoded = jwt.verify(req.get('token'), "supersecret");
 
         addChatMessage(db, decoded.nickname, req.body.nickname, req.body.message, (result) => {
-            client.close();
             if (result){
                 clients[req.body.nickname].send(result);
                 res.json(result).send();
             }
+            db.close();
         });
     });
 });
+
 app.ws('/chat-ws', function(ws, req) {
     ws.on('authenticate', function(msg) {
         token = JSON.parse(msg).token;
@@ -182,16 +182,6 @@ app.ws('/chat-ws', function(ws, req) {
         }
     });
     console.log('socket');
-});
-
-app.get('/db', (req, res) => {
-    client.connect(function(err) {
-        console.log("Connected successfully to server");
-        const db = client.db(dbName);
-        createNicknameIndex(db, console.log("nicknameIndex was settled up"));
-        client.close();
-    });
-    res.send("finished");
 });
 
 app.listen(port, () => console.log(`Messenger listening on port ${port}!`));
