@@ -28,20 +28,19 @@ app.use(function(err, req, res, next) {
     res.status(500).send('Something broke!');
 });
 
-//app.get('/', (req, res) => res.send('Hello World!'));
-
 app.post('/register', (req, res) =>{
     try {
         client.connect(function(err) {
             if (!err){
-                console.log("Connected successfully to server");
+                console.info(`[${Date.now().toString()}] Registering new user`);
                 const db = client.db(dbName);
                 const user = createUser(req.body);
                 if (user == null){
-                    console.log("User wasn`t created.");
+                    console.info(`[${Date.now().toString()}] User was not created`);
                     return;
                 }
                 db.collection('users').find(user).limit(1).toArray((err, docs) => {
+                    console.info(`[${Date.now().toString()}] Searching for exact user`);
                     if(!docs && err!=null || err == null && docs.length == 0){
                         db.collection('users').insertOne(user, function(err, r) {
                             if(err && r.insertedCount == 1){
@@ -49,8 +48,7 @@ app.post('/register', (req, res) =>{
                             }
                         });
                     } else if (docs.length > 0){
-                        console.log("user already exists");
-                        console.log(docs);
+                        console.info(`[${Date.now().toString()}] User already exists`);
                         client.close();
                         res.status(200).send("User already exists");
                     } else if (err){
@@ -64,21 +62,28 @@ app.post('/register', (req, res) =>{
         res.status(200).send();
     }
     catch(ex){
+        console.error(`[${Date.now().toString()}] Register issue: ${ex}`);
         res.status(400).send(ex);
     }
 });
 
 app.post('/login', (req, res) => {
+    console.info(`[${Date.now().toString()}] Login`);
     const user = createUser(req.body);
     client.connect(function(err) {
+        if (err){
+            console.error(`[${Date.now().toString()}] ${err}`);
+        }
         const db = client.db(dbName);
         db.collection('users').find(user).limit(1).toArray(function(err, docs) {         
             if(err){
-                console.log(err);
+                console.error(err);
             }else {
                 if (docs.length == 1){
+                    console.info(`[${Date.now().toString()}] User was found`);
                     res.status(200).send(jwt.sign(user, "supersecret"));
                 } else {
+                    console.info(`[${Date.now().toString()}] User was not found`);
                     res.status(400).send();
                 }
             }
@@ -90,15 +95,21 @@ app.post('/login', (req, res) => {
 
 app.use('/user/info', tokenchecker);
 app.get('/user/info',(req, res) => {
+    console.info(`[${Date.now().toString()}] User info called`);
     let searchQuery = jwt.verify(req.get('token'), "supersecret").nickname;
     client.connect(function(err) {
         const db = client.db(dbName);
+        if (err){
+            console.error(`[${Date.now().toString()}] ${err}`);
+        }
         findByNickName(db, searchQuery, function(docs) {
             if (docs && docs.length > 0){
                 let retVal = docs.find(x => x.nickname == searchQuery);
+                console.info(`[${Date.now().toString()}] returning user info: ${retVal}`);
                 res.status(200).json(retVal).send();
             } else {
-                res.status(200).send("Noone with such nickname was found.");
+                console.info(`[${Date.now().toString()}] There is no such a user`);
+                res.status(404).send("Noone with such nickname was found.");
             }
             db.close();          
         });    
@@ -108,16 +119,21 @@ app.get('/user/info',(req, res) => {
 app.use('/users/search', tokenchecker);
 app.get('/users/search', (req, res) => {
     const searchQuery = req.query.query;
-    console.log("Searching user with "+ searchQuery);
+    console.info("Searching user with "+ searchQuery);
     client.connect(function(err) {
+        if (err){
+            console.error(`[${Date.now().toString()}] ${err}`);
+        }
         const db = client.db(dbName);
         let decoded = jwt.verify(req.get('token'), "supersecret").nickname;
+        console.info(`[${Date.now().toString()}] Requested by ${decoded}`);
         findByNickName(db, searchQuery, function(docs) {
             if (docs && docs.length > 0){
                 docs = docs.filter(x => x.nickname.toLowerCase() != decoded.toLowerCase());
                 res.status(200).json(docs).send();
             } else {
-                res.status(200).send("Noone with such nickname was found.");
+                console.info(`[${Date.now().toString()}] [user/search] There is noone with such nickname `);
+                res.status(404).send("Noone with such nickname was found.");
             }   
             db.close();       
         });    
@@ -127,9 +143,13 @@ app.get('/users/search', (req, res) => {
 app.use('/chat', tokenchecker);
 app.post('/chat', function(req, res){
     client.connect((err)=> {
+        if (err){
+            console.error(`[${Date.now().toString()}] ${err}`);
+        }
         const db = client.db(dbName);
         const decoded = jwt.verify(req.get('token'), "supersecret");
-        
+        console.info(`[${Date.now().toString()}] Chat`);
+        console.info(`[${Date.now().toString()}] Requested by ${decoded.nickname} with ${req.body.title}`);
         getChat(db, decoded.nickname, req.body.nickname, req.body.title, (result) => {
             res.json(result[0]).send();
             db.close();
@@ -139,10 +159,14 @@ app.post('/chat', function(req, res){
 
 app.use('/chats', tokenchecker);
 app.get('/chats', function(req, res) {
-    client.connect((err)=> {
+    client.connect((err) => {
+        if (err){
+            console.error(`[${Date.now().toString()}] ${err}`);
+        }
         const db = client.db(dbName);
         const decoded = jwt.verify(req.get('token'), "supersecret");
-        
+        console.info(`[${Date.now().toString()}] Chats`);
+        console.info(`[${Date.now().toString()}] Requsted by ${decoded.nickname}`);
         getCurrentUserChats(db, decoded.nickname, (result) => {
             res.json(result).send();
             db.close();
@@ -155,11 +179,15 @@ app.use('/send/message', function(req, res){
     client.connect((err)=> {
         const db = client.db(dbName);
         const decoded = jwt.verify(req.get('token'), "supersecret");
-
+        console.info(`[${Date.now().toString()}] Sending a message by ${decoded.nickname} to ${req.body.nickname}`);
         addChatMessage(db, decoded.nickname, req.body.nickname, req.body.message, (result) => {
             if (result){
-                clients[req.body.nickname].send(result);
-                res.json(result).send();
+                if(clients[req.body.nickname]){
+                    console.info(`[${Date.now().toString()}] The client with such nickname is currently online`);
+                    console.info(`[${Date.now().toString()}] Sending a message via WS`);
+                    clients[req.body.nickname].send(result);
+                }
+                res.status(200).json(result).send();
             }
             db.close();
         });
@@ -168,20 +196,22 @@ app.use('/send/message', function(req, res){
 
 app.ws('/chat-ws', function(ws, req) {
     ws.on('authenticate', function(msg) {
+        console.info(`[${Date.now().toString()}] WS: Authenticated`);
         token = JSON.parse(msg).token;
         let decoded = jwt.decode(token);
         clients[decoded.nickname] = ws;
     });
 
-    ws.on('close', function(){
-        for (const key in clients) {
-            if (clients.hasOwnProperty(key)) {
-                const element = clients[key];
-                if (ws == element){
-                    delete clients[key];
-                }
-            }
-        }
+    ws.on('close', function(){ 
+        console.info(`[${Date.now().toString()}] WS: Closed`);
+        // for (const key in clients) {
+        //     if (clients.hasOwnProperty(key)) {
+        //         const element = clients[key];
+        //         if (ws == element){
+        //             delete clients[key];
+        //         }
+        //     }
+        // }
     });
     console.log('socket');
 });
