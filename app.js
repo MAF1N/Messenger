@@ -131,7 +131,7 @@ app.post('/chat', function(req, res){
         const decoded = jwt.verify(req.get('token'), "supersecret");
         
         getChat(db, decoded.nickname, req.body.nickname, req.body.title, (result) => {
-            res.json(result).send();
+            res.json(result[0]).send();
             db.close();
         });
     });
