@@ -4,7 +4,7 @@ function addChatMessage(db, nickname1, nickname2, message, callback){
         function(err, docs) {
             var result = docs.filter(x => x.users.find(u => u.nickname == nickname1))
                 .filter(x => x.users.find(u => u.nickname == nickname2));
-            if (!result || result.length == 0){
+            if (result && result.length == 0){
                 db.collection('users').findOne({nickname: nickname1}, function(err1, user1){
                     if (err1){
                         console.log("error was found while searching fisrt user.");
@@ -17,9 +17,11 @@ function addChatMessage(db, nickname1, nickname2, message, callback){
                             users: [user1, user2],
                             messages: [message],
                             title: user2.nickname ? user2.nickname : "Default Chat Name"
-                        }, function (res) {
-                            if (res.insertedCount == 1){
-                                console.log("Created new chat")
+                        }, function (err, res) {
+                            console.info(res);
+                            if (res && res.insertedCount == 1){
+                                console.log("Created new chat and added message");
+
                             }
                             result = message;
                             callback(result);
@@ -27,13 +29,7 @@ function addChatMessage(db, nickname1, nickname2, message, callback){
                     });
                 });   
             } else {
-                let updValue = {
-                    _id: result[0]._id,
-                    users: result[0].users,
-                    messages: [...result[0].messages].push(message),
-                    title: result[0].title
-                };
-                collection.updateOne({_id: result[0]._id}, updValue, (err, item) =>{
+                collection.update({_id: result[0]._id}, {$push: {messages: message}}, (err, item) =>{
                     if (err){
                         console.log(err);
                         callback(null);
