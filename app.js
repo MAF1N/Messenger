@@ -120,7 +120,7 @@ app.use('/chat', tokenchecker);
 app.post('/chat', function(req, res){
     const decoded = jwt.verify(req.get('token'), "supersecret");
     console.info(`[${ formatDate(new Date())}] Chat`);
-    console.info(`[${ formatDate(new Date())}] Requested by ${decoded.nickname} with ${req.body.title}`);
+    console.info(`[${ formatDate(new Date())}] Requested by ${decoded.nickname} with ${req.body.nickname}`);
     getChat(db, decoded.nickname, req.body.nickname, req.body.title, (result) => {
         res.json(result[0]).send();
          

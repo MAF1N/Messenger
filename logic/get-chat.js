@@ -4,29 +4,43 @@ function getChat(db, nickname1, nickname2, newTitle, callback){
         function(err, docs) {
             var result = docs.filter(x => x.users.find(u => u.nickname == nickname1))
                 .filter(x => x.users.find(u => u.nickname == nickname2));
-            if (!result || result.length == 0){
+            if (result && result.length == 0){
                 db.collection('users').findOne({nickname: nickname1}, function(err1, user1){
                     if (err1){
-                        console.log("error was found while searching fisrt user.");
+                        console.info("error was found while searching fisrt user.");
                     } 
-                    db.collection('users').findOne({nickname: nickname2}, function(err2, user2){
-                        if (err2){
-                            console.log("error was found while searching second user.");
-                        }
-                        collection.insertOne({
-                            users: [user1, user2],
-                            messages: [],
-                            title: newTitle ? newTitle : user2.nickname
-                        }, function (res) {
-                            if (res.insertedCount == 1){
-                                console.log("Created new chat")
+                    if (user1){
+                        db.collection('users').findOne({nickname: nickname2}, function(err2, user2){
+                            if (err2){
+                                console.info("error was found while searching second user.");
                             }
-                            result = fixChat(res);
-                            callback(result);
+                            if (user2){
+                                collection.insertOne({
+                                    users: [user1, user2],
+                                    messages: [],
+                                    title: newTitle ? newTitle : user2.nickname
+                                }, function (err, res) {
+                                    console.info(res);
+                                    if (res && res.insertedCount == 1){
+                                        console.log("Created new chat")
+                                        result = fixChat(res.ops);
+                                    }
+                                    callback(result);
+                                });
+                            }
+                            else {
+                                console.info("user2 is undefined");
+                            }
                         });
-                    });
+                    }
+                    else {
+                        console.info("user1 is undefined");
+                    }
+                    
                 });   
             } else {
+                console.info('found results: ');
+                console.info(result);
                 result = fixChat(result);
                 callback(result);
             }
@@ -34,6 +48,9 @@ function getChat(db, nickname1, nickname2, newTitle, callback){
     )
 }
 function fixChat(val){
+    if (!val){
+        return;
+    }
     var result = [...val];
     result.forEach(chat => {
         chat.users = chat.users.map(u => {
