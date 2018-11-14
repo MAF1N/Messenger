@@ -217,3 +217,8 @@ app.ws('/chat-ws', function(ws, req) {
 });
 
 app.listen(port, () => console.log(`Messenger listening on port ${port}!`));
+
+process.on('uncaughtException', (error) =>{
+    console.error(`[${Date.now().toString()}] UncaughtException: ${error}`);
+    app.removeAllListeners();
+});
