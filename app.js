@@ -147,7 +147,9 @@ app.use('/send/message', function(req, res){
             if(clients[req.body.nickname]){
                 console.info(`[${ formatDate(new Date())}] The client with such nickname is currently online`);
                 console.info(`[${ formatDate(new Date())}] Sending a message via WS`);
-                clients[req.body.nickname].send(result);
+                console.info(`[${ formatDate(new Date())}] Client: ${req.body.nickname}.`);
+                console.info(`[${ formatDate(new Date())}] Message: ${result}`);
+                clients[req.body.nickname].send(JSON.stringify(result));
             }
             res.status(200).json(result).send();
         }

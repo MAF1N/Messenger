@@ -20,7 +20,6 @@ function addChatMessage(db, nickname1, nickname2, message, callback){
                             console.info(res);
                             if (res && res.insertedCount == 1){
                                 console.log("Created new chat and added message");
-
                             }
                             result = message;
                             callback(result);
@@ -29,8 +28,9 @@ function addChatMessage(db, nickname1, nickname2, message, callback){
                 });   
             } else {
                 collection.update({_id: result[0]._id}, {$push: {messages: message}}, (err, item) =>{
+                    console.info(`[${ formatDate(new Date())}] Updating collection`);
                     if (err){
-                        console.log(err);
+                        console.error(err);
                         callback(null);
                         return;
                     }
