@@ -17,14 +17,14 @@ function getChat(db, nickname1, nickname2, newTitle, callback){
                             if (user2){
                                 collection.insertOne({
                                     users: [user1, user2],
-                                    messages: [],
-                                    title: newTitle ? newTitle : user2.nickname
+                                    messages: []
                                 }, function (err, res) {
                                     console.info(res);
                                     if (res && res.insertedCount == 1){
                                         console.log("Created new chat")
                                         result = fixChat(res.ops);
                                     }
+                                    result[0].title = user2.nickname;
                                     callback(result);
                                 });
                             }
@@ -42,6 +42,7 @@ function getChat(db, nickname1, nickname2, newTitle, callback){
                 console.info('found results: ');
                 console.info(result);
                 result = fixChat(result);
+                result[0].title = user2.nickname;
                 callback(result);
             }
         }

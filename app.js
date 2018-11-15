@@ -156,9 +156,11 @@ app.use('/send/message', function(req, res){
 });
 
 app.ws('/chat-ws', function(ws, req) {
-    ws.on('authenticate', function(msg) {
+
+    ws.on('message', function(msg) {
         console.info(`[${ formatDate(new Date())}] WS: Authenticated`);
         token = JSON.parse(msg).token;
+        console.info(`[${ formatDate(new Date())}] WS: token: ${token}`);
         let decoded = jwt.decode(token);
         clients[decoded.nickname] = ws;
     });
