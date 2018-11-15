@@ -42,7 +42,7 @@ function getChat(db, nickname1, nickname2, newTitle, callback){
                 console.info('found results: ');
                 console.info(result);
                 result = fixChat(result);
-                result[0].title = user2.nickname;
+                result[0].title = nickname2;
                 callback(result);
             }
         }
