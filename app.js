@@ -160,9 +160,11 @@ app.ws('/chat-ws', function(ws, req) {
     ws.on('message', function(msg) {
         console.info(`[${ formatDate(new Date())}] WS: Authenticated`);
         token = JSON.parse(msg).token;
-        console.info(`[${ formatDate(new Date())}] WS: token: ${token}`);
-        let decoded = jwt.decode(token);
-        clients[decoded.nickname] = ws;
+        if (token) {
+            console.info(`[${ formatDate(new Date())}] WS: token: ${token}`);
+            let decoded = jwt.decode(token);
+            clients[decoded.nickname] = ws;
+        }
     });
 
     ws.on('close', function(){ 

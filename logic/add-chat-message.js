@@ -15,8 +15,7 @@ function addChatMessage(db, nickname1, nickname2, message, callback){
                         }
                         collection.insertOne({
                             users: [user1, user2],
-                            messages: [message],
-                            title: user2.nickname ? user2.nickname : "Default Chat Name"
+                            messages: [message]
                         }, function (err, res) {
                             console.info(res);
                             if (res && res.insertedCount == 1){
