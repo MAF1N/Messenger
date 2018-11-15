@@ -28,7 +28,7 @@ function addChatMessage(db, nickname1, nickname2, message, callback){
                 });   
             } else {
                 collection.update({_id: result[0]._id}, {$push: {messages: message}}, (err, item) =>{
-                    console.info(`[${ formatDate(new Date())}] Updating collection`);
+                    console.info(`Updating collection`);
                     if (err){
                         console.error(err);
                         callback(null);
