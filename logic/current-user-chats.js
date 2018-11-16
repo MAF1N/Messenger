@@ -17,7 +17,14 @@ function getCurrentUserChats(db, nickname1, callback){
                                     image: value.image ? value.image : 0
                                 };
                             }), 
-                            lastMessage: value.messages.length ? value.messages[value.messages.length - 1] : "",
+                            lastMessage: value.messages.length 
+                                ? value.messages[value.messages.length - 1] 
+                                : {
+                                    date:"",
+                                    id:"",
+                                    sender:"",
+                                    text:""
+                                },
                             title: value.title
                         }
                     });
